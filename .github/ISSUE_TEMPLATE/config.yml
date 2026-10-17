@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Development guide
+    url: https://github.com/suradet-ps/codeframe/blob/main/AGENTS.md
+    about: Architecture, crate boundaries, and coding standards
+  - name: Contributing guide
+    url: https://github.com/suradet-ps/codeframe/blob/main/docs/CONTRIBUTING.md
+    about: The 10 CI gates, local checks, and how to land a change
+  - name: Security policy
+    url: https://github.com/suradet-ps/codeframe/blob/main/docs/SECURITY.md
+    about: What CodeFrame collects (nothing), and how to report a vulnerability

@@ -1,0 +1,109 @@
+name: Bug report
+description: Something is not working as it should
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping make CodeFrame better. Please fill in the fields below.
+
+        CodeFrame runs entirely in your browser - nothing is uploaded anywhere -
+        so a sample of the code that triggered the bug is the single most useful
+        thing you can attach. Never paste anything confidential; you can minimize
+        the snippet instead.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: A short, clear description of the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Paste ...
+        2. Select language / theme / scale ...
+        3. Press Ctrl/Cmd+Enter ...
+        4. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include the error message or console output, if any.
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: Sample code
+      description: A minimal snippet that triggers the bug, if applicable.
+      render: text
+    validations:
+      required: false
+  - type: dropdown
+    id: export_type
+    attributes:
+      label: Where did it go wrong?
+      options:
+        - Live preview
+        - PNG export
+        - SVG export
+        - Clipboard copy
+        - UI controls / settings
+        - Not applicable
+    validations:
+      required: true
+  - type: input
+    id: settings
+    attributes:
+      label: Language / theme / font / scale
+      description: If the bug involves rendering, which settings were selected?
+      placeholder: "e.g. Rust, Dracula, Fira Code, 8x"
+    validations:
+      required: false
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options:
+        - Chrome
+        - Firefox
+        - Safari
+        - Edge
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: browser_version
+    attributes:
+      label: Browser version
+      placeholder: "e.g. 141.0.7390.55"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: CodeFrame version
+      description: Shown in the footer of the app.
+      placeholder: "e.g. 0.7.0"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console output or extra context
+      description: Browser console output (WASM panics land here), screenshots, or anything else useful. Never paste secrets or confidential code.
+      render: text
+    validations:
+      required: false
