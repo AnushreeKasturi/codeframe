@@ -45,7 +45,7 @@ shape are listed under "Out of Scope" so the line is drawn on purpose.
   `highlighter` (syntect wrapper, framework-agnostic), `renderer` (Canvas2D
   drawing, no Leptos), `app` (the only Leptos-aware crate).
 - **CI** (`.github/workflows/ci.yml`): 10 jobs - `check` (WASM), `clippy`,
-  `fmt --check`, `test` (`cargo test --lib`), `cargo audit`, `cargo deny`,
+  `fmt --check`, `test` (`cargo test --workspace`), `cargo audit`, `cargo deny`,
   `hex-audit` (no raw hex outside CSS tokens), `csp-verify` (validates the
   CSP in `vercel.json`), gated `trunk build --release`, and `perf-budget`
   (WASM gzipped ≤ 1200 KB, total bundle ≤ 1350 KB). SHA-pinned actions,
