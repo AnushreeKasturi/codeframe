@@ -15,3 +15,8 @@ web-sys = { version = "0.3", features = [
     "HtmlCanvasElement",
     "TextMetrics",
 ] }
+
+[dev-dependencies]
+# XML parser used to assert that SVG exports are well-formed (regression test
+# for the legacy `font` shorthand attribute that broke XML parsing).
+roxmltree = "0.20"
