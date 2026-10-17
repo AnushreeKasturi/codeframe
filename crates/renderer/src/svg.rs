@@ -33,21 +33,26 @@ fn esc(s: &str) -> String {
     .replace('\'', "&#39;")
 }
 
-/// Build a CSS `font` property value for a token style.
-fn font_css(style: &FontStyle, family: &str, size: f64) -> String {
-  let weight = if style.bold { "700" } else { "400" };
-  let size_str = format!("{size}px");
-  let mut font = String::with_capacity(64);
+/// Build the font presentation attributes for a `<text>` element:
+/// `font-family` and `font-size`, plus `font-style` / `font-weight` when the
+/// style sets them.
+///
+/// These are emitted as separate XML attributes instead of the legacy `font`
+/// shorthand: the shorthand value would embed raw double quotes around the
+/// family name (`font="400 14px "JetBrains Mono", monospace"`), which breaks
+/// the XML attribute and makes the exported file unparseable.
+fn font_attrs(style: &FontStyle, family: &str, size: f64) -> String {
+  let mut attrs = format!(
+    "font-family=\"{}, monospace\" font-size=\"{size}px\"",
+    esc(family)
+  );
   if style.italic {
-    font.push_str("italic ");
+    attrs.push_str(" font-style=\"italic\"");
   }
-  font.push_str(weight);
-  font.push(' ');
-  font.push_str(&size_str);
-  font.push_str(" \"");
-  font.push_str(family);
-  font.push_str("\", monospace");
-  font
+  if style.bold {
+    attrs.push_str(" font-weight=\"700\"");
+  }
+  attrs
 }
 
 /// Approximate character width for a monospace font at a given size.
@@ -217,11 +222,11 @@ pub fn render_svg(
   for line in &lines {
     let mut x = layout.code_origin_x;
     for token in line {
-      let font = font_css(&token.font_style, family, options.font_size);
+      let font = font_attrs(&token.font_style, family, options.font_size);
       let fill = token.color.to_css();
       let text = esc(&token.text);
       svg.push_str(&format!(
-        "<text x=\"{x}\" y=\"{y}\" font=\"{font}\" fill=\"{fill}\" dominant-baseline=\"hanging\">{text}</text>",
+        "<text x=\"{x}\" y=\"{y}\" {font} fill=\"{fill}\" dominant-baseline=\"hanging\">{text}</text>",
       ));
       x += token.text.chars().count() as f64 * cw;
     }
@@ -231,11 +236,11 @@ pub fn render_svg(
   // --- 5. Line numbers ---
   if options.line_numbers {
     let fill = palette.foreground.to_css_with_alpha(0.45);
-    let font = font_css(&FontStyle::default(), family, options.font_size);
+    let font = font_attrs(&FontStyle::default(), family, options.font_size);
     let mut y = layout.code_origin_y;
     for number in 1..=layout.line_count {
       svg.push_str(&format!(
-        "<text x=\"{x}\" y=\"{y}\" font=\"{font}\" fill=\"{fill}\" text-anchor=\"end\" dominant-baseline=\"hanging\">{number}</text>",
+        "<text x=\"{x}\" y=\"{y}\" {font} fill=\"{fill}\" text-anchor=\"end\" dominant-baseline=\"hanging\">{number}</text>",
         x = layout.gutter_right_x,
       ));
       y += layout.line_height_px;
@@ -461,11 +466,11 @@ fn render_panel_svg(
   for line in lines {
     let mut x = code_x;
     for token in line {
-      let font = font_css(&token.font_style, family, options.font_size);
+      let font = font_attrs(&token.font_style, family, options.font_size);
       let fill = token.color.to_css();
       let text = esc(&token.text);
       svg.push_str(&format!(
-        "<text x=\"{x}\" y=\"{y}\" font=\"{font}\" fill=\"{fill}\" dominant-baseline=\"hanging\">{text}</text>",
+        "<text x=\"{x}\" y=\"{y}\" {font} fill=\"{fill}\" dominant-baseline=\"hanging\">{text}</text>",
       ));
       x += token.text.chars().count() as f64 * cw;
     }
@@ -475,12 +480,12 @@ fn render_panel_svg(
   // Line numbers.
   if options.line_numbers {
     let fill = palette.foreground.to_css_with_alpha(0.45);
-    let font = font_css(&FontStyle::default(), family, options.font_size);
+    let font = font_attrs(&FontStyle::default(), family, options.font_size);
     let mut y = layout.code_origin_y;
     let gutter_x = layout.gutter_right_x + offset_x;
     for number in 1..=layout.line_count {
       svg.push_str(&format!(
-        "<text x=\"{gutter_x}\" y=\"{y}\" font=\"{font}\" fill=\"{fill}\" text-anchor=\"end\" dominant-baseline=\"hanging\">{number}</text>",
+        "<text x=\"{gutter_x}\" y=\"{y}\" {font} fill=\"{fill}\" text-anchor=\"end\" dominant-baseline=\"hanging\">{number}</text>",
       ));
       y += layout.line_height_px;
     }
@@ -644,5 +649,101 @@ mod tests {
     // The number "1" might appear in coordinates, but text-anchor="end" (line numbers)
     // won't be present.
     assert!(!svg.contains("text-anchor"));
+  }
+
+  #[test]
+  fn single_panel_svg_is_well_formed_xml() {
+    let tokens = sample_tokens();
+    let palette = ThemePalette {
+      background: RgbColor::new(0x28, 0x2a, 0x36),
+      foreground: RgbColor::new(0xf8, 0xf8, 0xf2),
+    };
+    // Line numbers on, so both text-bearing paths (tokens and numbers) are
+    // exercised in one document.
+    let options = ExportOptions {
+      line_numbers: true,
+      ..Default::default()
+    };
+    let (svg, _) = render_svg(&tokens, &palette, &options);
+    roxmltree::Document::parse(&svg).expect("single panel SVG must be well-formed XML");
+  }
+
+  #[test]
+  fn split_svg_is_well_formed_xml() {
+    let tokens = sample_tokens();
+    let palette = ThemePalette {
+      background: RgbColor::new(0x28, 0x2a, 0x36),
+      foreground: RgbColor::new(0xf8, 0xf8, 0xf2),
+    };
+    let options = ExportOptions {
+      line_numbers: true,
+      ..Default::default()
+    };
+    let (svg, _, _) = render_split_svg(&tokens, &palette, &tokens, &palette, &options);
+    roxmltree::Document::parse(&svg).expect("split SVG must be well-formed XML");
+  }
+
+  #[test]
+  fn text_elements_use_font_attributes_not_the_legacy_shorthand() {
+    let tokens = sample_tokens();
+    let palette = ThemePalette {
+      background: RgbColor::new(0x28, 0x2a, 0x36),
+      foreground: RgbColor::new(0xf8, 0xf8, 0xf2),
+    };
+    let options = ExportOptions::default();
+    let (svg, _) = render_svg(&tokens, &palette, &options);
+    assert!(
+      svg.contains("font-family=\"JetBrains Mono, monospace\""),
+      "expected a font-family attribute: {svg}"
+    );
+    assert!(
+      svg.contains("font-size=\"14px\""),
+      "expected a font-size attribute: {svg}"
+    );
+    // The legacy `font` shorthand embeds raw quotes around the family name and
+    // breaks XML parsing; it must never come back.
+    assert!(
+      !svg.contains("font=\""),
+      "legacy font shorthand found: {svg}"
+    );
+  }
+
+  #[test]
+  fn bold_and_italic_styles_map_to_font_attributes() {
+    let color = RgbColor::new(0xff, 0xff, 0xff);
+    let tokens = vec![
+      Token {
+        text: "bold".to_string(),
+        color,
+        font_style: FontStyle {
+          bold: true,
+          italic: false,
+          underline: false,
+        },
+      },
+      Token {
+        text: "italic".to_string(),
+        color,
+        font_style: FontStyle {
+          bold: false,
+          italic: true,
+          underline: false,
+        },
+      },
+    ];
+    let palette = ThemePalette {
+      background: RgbColor::new(0x00, 0x00, 0x00),
+      foreground: RgbColor::new(0xff, 0xff, 0xff),
+    };
+    let (svg, _) = render_svg(&tokens, &palette, &ExportOptions::default());
+    assert!(
+      svg.contains("font-weight=\"700\""),
+      "missing bold weight: {svg}"
+    );
+    assert!(
+      svg.contains("font-style=\"italic\""),
+      "missing italic style: {svg}"
+    );
+    roxmltree::Document::parse(&svg).expect("styled SVG must be well-formed XML");
   }
 }
